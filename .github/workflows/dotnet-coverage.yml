@@ -59,12 +59,11 @@ jobs:
         hide_branch_rate: false
         hide_complexity: false
         indicators: true
-        output: both
+        output: both # Xuất ra cả file và console
         thresholds: '70 80'
 
     - name: Add Coverage PR Comment
-      uses: marooned/github-action-comment-pull-request@v2
+      uses: thollander/actions-comment-pull-request@v2
       if: github.event_name == 'pull_request'
       with:
-        message: "Coverage Report Summary"
-        file: code-coverage-results.md
+        filePath: code-coverage-results.md 
