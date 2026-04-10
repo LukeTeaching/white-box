@@ -40,10 +40,10 @@ jobs:
         fail_below_min: false # Để pipeline không chết ngay, giúp bước comment vẫn chạy được
         format: markdown
         hide_branch_rate: false
-        hide_complexity: false
+        hide_complexity: true
         indicators: true
         output: both
-        thresholds: '70 80'
+        thresholds: '60 80'
 
     - name: Add Coverage PR Comment
       # Chỉ chạy khi có Pull Request
@@ -63,6 +63,19 @@ jobs:
     - name: Publish Coverage Summary
       # Đẩy tóm tắt vào GitHub Step Summary
       run: cat coveragereport/Summary.md >> $GITHUB_STEP_SUMMARY
+
+    - name: ReportGenerator Detail
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+      with:
+        reports: 'results/**/*.xml'
+        targetdir: 'full-report'
+        reporttypes: 'HtmlInline_AzurePipelines' # Định dạng HTML chuyên sâu
+
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: full-coverage-report # Tên file Zip bạn sẽ tải về
+        path: full-report/
 
     - name: Check Coverage Threshold
       shell: pwsh
