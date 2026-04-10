@@ -1,0 +1,96 @@
+name: .NET Core Coverage
+
+on:
+  push:
+    branches: [ main, codecov ]
+  pull_request:
+    branches: [ main, codecov ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0' 
+
+    - name: Restore & Build
+      run: |
+        dotnet restore
+        dotnet build --no-restore --configuration Release
+
+    - name: Test & Collect Coverage
+      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./results
+
+    # TẠO FILE BÁO CÁO TÓM TẮT (Dùng cho PR Comment và Annotations)
+    - name: Code Coverage Summary Report
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: 'results/**/*.xml'
+        badge: true
+        fail_below_min: false # Để pipeline chạy tiếp đến các bước báo cáo chi tiết
+        format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
+        output: both
+        thresholds: '60 80'
+
+    # ĐĂNG COMMENT VÀO PULL REQUEST
+    - name: Add Coverage PR Comment
+      uses: thollander/actions-comment-pull-request@v2
+      if: github.event_name == 'pull_request'
+      with:
+        filePath: code-coverage-results.md 
+
+    # TẠO BÁO CÁO HTML VÀ MARKDOWN SUMMARY CHO GITHUB UI
+    - name: Generate Detailed Reports
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+      with:
+        reports: 'results/**/*.xml'
+        targetdir: 'reports'
+        reporttypes: 'MarkdownSummary;HtmlInline_AzurePipelines'
+
+    - name: Publish Step Summary
+      run: cat reports/Summary.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload HTML Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: full-coverage-report
+        path: reports/
+
+    # BƯỚC CUỐI CÙNG: KIỂM TRA NGƯỠNG (CHẶN MERGE)
+    - name: Check Coverage Threshold
+      shell: pwsh
+      run: |
+        $report = Get-ChildItem -Path results -Filter *.xml -Recurse | Select-Object -First 1
+        [xml]$xml = Get-Content $report.FullName
+        
+        # Lấy Line Coverage
+        $lineRate = [double]$xml.coverage."line-rate" * 100
+        # Lấy Branch Coverage (Cực kỳ quan trọng cho kiểm thử đường cơ bản)
+        $branchRate = [double]$xml.coverage."branch-rate" * 100
+        
+        $lineThreshold = 80
+        $branchThreshold = 70 # Ngữ cảnh thực tế thường thấp hơn Line một chút
+
+        Write-Host "--- KẾT QUẢ KIỂM TRA ---" -ForegroundColor Cyan
+        Write-Host "Line Coverage: $lineRate% (Ngưỡng: $lineThreshold%)"
+        Write-Host "Branch Coverage: $branchRate% (Ngưỡng: $branchThreshold%)"
+
+        if ($lineRate -lt $lineThreshold -or $branchRate -lt $branchThreshold) {
+            Write-Host "=> THẤT BẠI: Code chưa phủ hết các đường cơ bản yêu cầu!" -ForegroundColor Red
+            exit 1
+        } else {
+            Write-Host "=> THÀNH CÔNG: Code đạt tiêu chuẩn chất lượng." -ForegroundColor Green
+        }
