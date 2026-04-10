@@ -2,7 +2,11 @@ name: .NET Core Coverage
 
 on:
   push:
-    branches: [ main ]
+    branches: 
+    - main
+    - 'feat/*'     # Khớp với feat/login, feat/api (1 cấp)
+    - 'fix/**'      # Khớp với fix/bug-1, fix/ui/button (nhiều cấp)
+    - 'hotfix-*'    # Khớp với hotfix-security, hotfix-v1 
   pull_request:
     branches: [ main ]
 
