@@ -7,9 +7,9 @@ on:
     branches: [ main, codecov ]
 
 permissions:
-  contents: read
-  pull-requests: write
-
+  contents: read      # Để đọc mã nguồn và file .csproj
+  pull-requests: write # Để đăng bảng tóm tắt Coverage vào phần thảo luận của PR
+  checks: write        # Để tạo Annotations (vạch xanh/đỏ) trong tab Files Changed
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -76,6 +76,14 @@ jobs:
       with:
         name: full-coverage-report # Tên file Zip bạn sẽ tải về
         path: full-report/
+    
+    - name: Annotation code in pull request
+      uses: joshjohanning/dotnet-coverage-report@v0.11
+      if: github.event_name == 'pull_request'
+      with:
+        path: results/**/*.xml
+        reports: 'results/**/*.xml'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check Coverage Threshold
       shell: pwsh
