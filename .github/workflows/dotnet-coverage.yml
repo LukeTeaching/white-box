@@ -44,3 +44,8 @@ jobs:
       # Bạn có thể dùng flag -thresholds trong ReportGenerator hoặc script custom
       run: |
         echo "Kiểm tra ngưỡng bao phủ tối thiểu..."
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: results/**/coverage.cobertura.xml
