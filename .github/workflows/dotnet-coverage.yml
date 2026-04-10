@@ -2,9 +2,9 @@ name: .NET Core Coverage
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, codecov ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, codecov ]
 
 jobs:
   build:
