@@ -7,9 +7,10 @@ on:
     branches: [ main, codecov ]
 
 permissions:
-  contents: read      # Để đọc mã nguồn và file .csproj
-  pull-requests: write # Để đăng bảng tóm tắt Coverage vào phần thảo luận của PR
-  checks: write        # Để tạo Annotations (vạch xanh/đỏ) trong tab Files Changed
+  contents: read
+  pull-requests: write
+  checks: write 
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,22 +23,21 @@ jobs:
       with:
         dotnet-version: '9.0' 
 
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+    - name: Restore & Build
+      run: |
+        dotnet restore
+        dotnet build --no-restore --configuration Release
 
     - name: Test & Collect Coverage
-      # Thêm --configuration Release để đồng bộ với bước build
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./results
 
+    # TẠO FILE BÁO CÁO TÓM TẮT (Dùng cho PR Comment và Annotations)
     - name: Code Coverage Summary Report
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: 'results/**/*.xml' # Sử dụng wildcard khớp với kết quả dotnet test
+        filename: 'results/**/*.xml'
         badge: true
-        fail_below_min: false # Để pipeline không chết ngay, giúp bước comment vẫn chạy được
+        fail_below_min: false # Để pipeline chạy tiếp đến các bước báo cáo chi tiết
         format: markdown
         hide_branch_rate: false
         hide_complexity: true
@@ -45,65 +45,52 @@ jobs:
         output: both
         thresholds: '60 80'
 
+    # ĐĂNG COMMENT VÀO PULL REQUEST
     - name: Add Coverage PR Comment
-      # Chỉ chạy khi có Pull Request
       uses: thollander/actions-comment-pull-request@v2
       if: github.event_name == 'pull_request'
       with:
         filePath: code-coverage-results.md 
 
-    - name: ReportGenerator
-      # Bước này tạo báo cáo HTML chi tiết để xem trong Step Summary
+    # TẠO BÁO CÁO HTML VÀ MARKDOWN SUMMARY CHO GITHUB UI
+    - name: Generate Detailed Reports
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
       with:
         reports: 'results/**/*.xml'
-        targetdir: 'coveragereport'
-        reporttypes: 'MarkdownSummary' 
+        targetdir: 'reports'
+        reporttypes: 'MarkdownSummary;HtmlInline_AzurePipelines'
 
-    - name: Publish Coverage Summary
-      # Đẩy tóm tắt vào GitHub Step Summary
-      run: cat coveragereport/Summary.md >> $GITHUB_STEP_SUMMARY
+    - name: Publish Step Summary
+      run: cat reports/Summary.md >> $GITHUB_STEP_SUMMARY
 
-    - name: ReportGenerator Detail
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
-      with:
-        reports: 'results/**/*.xml'
-        targetdir: 'full-report'
-        reporttypes: 'HtmlInline_AzurePipelines' # Định dạng HTML chuyên sâu
-
-    - name: Upload Coverage Report
+    - name: Upload HTML Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: full-coverage-report # Tên file Zip bạn sẽ tải về
-        path: full-report/
-    
-    - name: Annotation code in pull request
-      uses: joshjohanning/dotnet-coverage-report@v0.11
-      if: github.event_name == 'pull_request'
-      with:
-        path: results/**/*.xml
-        reports: 'results/**/*.xml'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        name: full-coverage-report
+        path: reports/
 
+    # BƯỚC CUỐI CÙNG: KIỂM TRA NGƯỠNG (CHẶN MERGE)
     - name: Check Coverage Threshold
       shell: pwsh
       run: |
-        # Đọc file kết quả (giả sử chỉ có 1 file xml trong results)
         $report = Get-ChildItem -Path results -Filter *.xml -Recurse | Select-Object -First 1
         [xml]$xml = Get-Content $report.FullName
         
-        # Lấy tỷ lệ bao phủ dòng (line-rate) - giá trị từ 0 đến 1
-        $lineRate = [double]$xml.coverage."line-rate"
-        $coveragePercent = $lineRate * 100
-        $threshold = 80
+        # Lấy Line Coverage
+        $lineRate = [double]$xml.coverage."line-rate" * 100
+        # Lấy Branch Coverage (Cực kỳ quan trọng cho kiểm thử đường cơ bản)
+        $branchRate = [double]$xml.coverage."branch-rate" * 100
+        
+        $lineThreshold = 80
+        $branchThreshold = 70 # Ngữ cảnh thực tế thường thấp hơn Line một chút
 
-        Write-Host "--- THÔNG TIN COVERAGE ---" -ForegroundColor Cyan
-        Write-Host "Phần trăm bao phủ thực tế: $coveragePercent%"
-        Write-Host "Ngưỡng yêu cầu: $threshold%"
+        Write-Host "--- KẾT QUẢ KIỂM TRA ---" -ForegroundColor Cyan
+        Write-Host "Line Coverage: $lineRate% (Ngưỡng: $lineThreshold%)"
+        Write-Host "Branch Coverage: $branchRate% (Ngưỡng: $branchThreshold%)"
 
-        if ($coveragePercent -lt $threshold) {
-            Write-Host "KẾT QUẢ: KHÔNG ĐẠT! Vui lòng bổ sung Unit Test." -ForegroundColor Red
-            exit 1 # Lệnh này làm pipeline thất bại
+        if ($lineRate -lt $lineThreshold -or $branchRate -lt $branchThreshold) {
+            Write-Host "=> THẤT BẠI: Code chưa phủ hết các đường cơ bản yêu cầu!" -ForegroundColor Red
+            exit 1
         } else {
-            Write-Host "KẾT QUẢ: ĐẠT TIÊU CHUẨN." -ForegroundColor Green
+            Write-Host "=> THÀNH CÔNG: Code đạt tiêu chuẩn chất lượng." -ForegroundColor Green
         }
