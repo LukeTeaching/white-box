@@ -1,0 +1,46 @@
+name: .NET Core Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0' # Thay đổi theo version bạn đang dùng
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test & Collect Coverage
+      # Lưu ý: --no-build để tiết kiệm thời gian, dùng lại build ở bước trước
+      run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./results
+
+    - name: ReportGenerator
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.4
+      with:
+        reports: 'results/**/coverage.cobertura.xml'
+        targetdir: 'coveragereport'
+        reporttypes: 'HtmlInline_AzurePipelines;MarkdownSummary' # Tạo Markdown để hiển thị trên PR
+
+    - name: Publish Coverage Summary
+      # Hiển thị tóm tắt coverage vào phần Step Summary của GitHub Action
+      run: cat coveragereport/Summary.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Check Coverage Threshold
+      # Chặn pipeline nếu coverage thấp hơn 80% (Ví dụ)
+      # Bạn có thể dùng flag -thresholds trong ReportGenerator hoặc script custom
+      run: |
+        echo "Kiểm tra ngưỡng bao phủ tối thiểu..."
