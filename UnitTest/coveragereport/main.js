@@ -290,7 +290,7 @@ var assemblies = [
   {
     "name": "ServicesLib",
     "classes": [
-      { "name": "ServicesLib.Services", "rp": "ServicesLib_Services.html", "cl": 4, "ucl": 2, "cal": 6, "tl": 13, "cb": 5, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "ServicesLib.Services", "rp": "ServicesLib_Services.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 13, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
 
