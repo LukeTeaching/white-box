@@ -10,26 +10,26 @@
             return "Fail";                                
         }
 
-        //public string ProcessGrades(double[] grades)
-        //{
-        //    if (grades.Length == 0) return "Empty List";
+        public string ProcessGrades(double[] grades)
+        {
+            if (grades.Length == 0) return "Empty List";
 
-        //    double sum = 0;
-        //    for (int i = 0; i < grades.Length; i++)
-        //    {
-        //        if (grades[i] < 0 || grades[i] > 10)
-        //        {
-        //            return "Invalid Grade";
-        //        }
-        //        sum += grades[i];
-        //    }
+            double sum = 0;
+            for (int i = 0; i < grades.Length; i++)
+            {
+                if (grades[i] < 0 || grades[i] > 10)
+                {
+                    return "Invalid Grade";
+                }
+                sum += grades[i];
+            }
 
-        //    double avg = sum / grades.Length;
+            double avg = sum / grades.Length;
 
-        //    if (avg >= 8.0) return "Excellent";
-        //    if (avg >= 5.0) return "Passed";
+            if (avg >= 8.0) return "Excellent";
+            if (avg >= 5.0) return "Passed";
 
-        //    return "Failed";
-        //}
+            return "Failed";
+        }
     }
 }
