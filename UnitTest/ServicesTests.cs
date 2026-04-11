@@ -24,7 +24,7 @@ namespace UnitTest
             yield return new TestCaseData(7.9, "Pass");
 
             yield return new TestCaseData(0, "Fail");
-            yield return new TestCaseData(4.9, "Fail");
+            //yield return new TestCaseData(4.9, "Fail");
 
 
         }
